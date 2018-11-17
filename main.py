@@ -14,7 +14,7 @@ qread = pd.read_csv('qdata.csv', index_col=False)
 targetcols = [col1, col2, col3]
 f = open('qdatafile.txt', 'w+')
 
-def colread(): # loops through targetcols, writes counts of column to file, bounded by 20 dashes
+def colread(f, targetcols, qread): # loops through targetcols, writes counts of column to file, bounded by 20 dashes
     # normalises the text to lower case in a holding list
     for targetcol in targetcols:
         list1 = []
@@ -38,7 +38,7 @@ def colread(): # loops through targetcols, writes counts of column to file, boun
             f.write(str(pos) + '.' + str(u[0]) + ' : ' + str(u[1]) + '\n')
             pos += 1
 
-def lowrate(): # appends a list of all general queries that led to a rating of 1 or 2 out of 4
+def lowrate(qread, f): # appends a list of all general queries that led to a rating of 1 or 2 out of 4
     # sorts ratings by value in new Series then adds 1s and 2s together (assuming they are "low" in your rating)
     qreadsort = qread.sort_values(by='Rate UX Column')
     lowratings = list(qreadsort.loc[:,'Rate UX Column'])
@@ -52,7 +52,7 @@ def lowrate(): # appends a list of all general queries that led to a rating of 1
         if str(i) != 'nan' :
             f.write(str(i)+'\n')
 
-def averagerate(): # appends an average of all user ratings to the txt file, default to 4 star rating
+def averagerate(qread, f): # appends an average of all user ratings to the txt file, default to 4 star rating
     listi = []
     for i in list(qread.loc[:,'Rate UX Column']):
         # filters out Nan values, faster than other methods
@@ -61,7 +61,7 @@ def averagerate(): # appends an average of all user ratings to the txt file, def
     average = sum(listi)/len(listi)
     f.write("Average Rating: " + str(average))
 
-def rating_plotter(): # plots a bar graph of total numbers of each user rating
+def rating_plotter(qread): # plots a bar graph of total numbers of each user rating
     # defines the counter variable and how many ratings exist 
     counter = list(qread.loc[:,'Rate UX Column'])
     totals = [counter.count(1), counter.count(2), counter.count(3), counter.count(4)]
@@ -95,7 +95,7 @@ def rating_plotter(): # plots a bar graph of total numbers of each user rating
             ha='center')                # horizontally center label
     plt.show()
 
-def conversion_plotter(): # plots a pie chart of how many chats complete (conversion rate)
+def conversion_plotter(qread): # plots a pie chart of how many chats complete (conversion rate)
     conv = list(qread.loc[:,'isComplete'])
     x = conv.count(True)
     y = conv.count(False)
@@ -110,7 +110,7 @@ def conversion_plotter(): # plots a pie chart of how many chats complete (conver
     plt.title('Conversion Ratings for chatbot', pad=20)
     plt.show()
 
-def word_cloud(): # generates a random word cloud out of general enquiries words
+def word_cloud(qread): # generates a random word cloud out of general enquiries words
     text = [] # pulls all text input words into one string, filtering out NaN values
     for i in list(qread.loc[:,'User Input Column']):
         if str(i) != 'nan':
@@ -123,7 +123,7 @@ def word_cloud(): # generates a random word cloud out of general enquiries words
     plt.axis("off")
     plt.show()
 
-def time_day(): # plots a histogram of hours of the day chats are started
+def time_day(qread): # plots a histogram of hours of the day chats are started
     def bins_labels(bins, **kwargs):
         bin_w = (max(bins) - min(bins)) / (len(bins) - 1)
         plt.xticks(np.arange(min(bins)+bin_w/2, max(bins), bin_w), bins, **kwargs)
@@ -147,10 +147,10 @@ def time_day(): # plots a histogram of hours of the day chats are started
 
 
 # calls all defined functions
-colread()
-lowrate()
-averagerate()
-rating_plotter()
-conversion_plotter()
-word_cloud()
-time_day()
+colread(qread, f, targetcols)
+lowrate(qread, f)
+averagerate(qread, f)
+rating_plotter(qread)
+conversion_plotter(qread)
+word_cloud(qread)
+time_day(qread)
