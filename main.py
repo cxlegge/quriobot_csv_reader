@@ -54,7 +54,7 @@ def lowrate(fileread, f): # appends a list of all general queries that led to a 
 
 def averagerate(fileread, f): # appends an average of all user ratings to the txt file, assuming ratings are out of 4
     list1 = []
-    for i in list(fileread.loc[:,'## RATE ## User Experience']):
+    for i in list(fileread.loc[:,'column_name']):
         # filters out Nan values, faster than other methods
         if i in range(0,5):
             list1.append(i)
