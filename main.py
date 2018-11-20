@@ -1,6 +1,7 @@
 # modules for the plotting and data-based functions
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pyl
 import re
 import numpy as np
 import operator as op
@@ -9,16 +10,16 @@ from PIL import Image
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 
 # sets the path to the source file, where 'qdata.csv' is the filename
-# and 'qdatafile.txt' is the text file destination
+# and 'qdbdatasysxp.txt' is the text file destination
 qread = pd.read_csv('qdata.csv', index_col=False)
-targetcols = [col1, col2, col3]
-f = open('qdatafile.txt', 'w+')
+targetcols = ['col1', 'col2', 'col3']
+f = open('results.txt', 'w+')
 
-def colread(): # loops through targetcols, writes counts of column to file, bounded by 20 dashes
+def colread(fileread, targetcols, f): # loops through targetcols, writes counts of column to file, bounded by 20 dashes
     # normalises the text to lower case in a holding list
     for targetcol in targetcols:
         list1 = []
-        for i in list((qread.loc[:,targetcol])):
+        for i in list((fileread.loc[:,targetcol])):
             try:
                 list1.append(i.lower())
             except:
@@ -34,36 +35,35 @@ def colread(): # loops through targetcols, writes counts of column to file, boun
         groupdict_x = sorted(groupdict.items(), key=op.itemgetter(1), reverse=True)
         pos = 1
         for u in groupdict_x: # writes the key/value pairs
-
             f.write(str(pos) + '.' + str(u[0]) + ' : ' + str(u[1]) + '\n')
             pos += 1
 
-def lowrate(): # appends a list of all general queries that led to a rating of 1 or 2 out of 4
-    # sorts ratings by value in new Series then adds 1s and 2s together (assuming they are "low" in your rating)
-    qreadsort = qread.sort_values(by='Rate UX Column')
-    lowratings = list(qreadsort.loc[:,'Rate UX Column'])
+def lowrate(fileread, f): # appends a list of all general queries that led to a rating of 1 or 2 out of 4
+    # sorts ratings by value in new Series then adds 1s and 2s together
+    filereadsort = fileread.sort_values(by='column_name')
+    lowratings = list(filereadsort.loc[:,'column_name'])
     lowratingscount = (lowratings.count(1) + lowratings.count(2))
     # creates Series from the ratings column indices 0 - (number of low ratings counted earlier)
-    final_low = (qreadsort.iloc[:(lowratingscount)-1,26]) 
+    final_low = (filereadsort.iloc[:(lowratingscount)-1,26])
     # creates header with title
-    f.write(('-'*20) + '\n' + 'Lowest Rated General Queries' + '\n' + ('-'*20) + '\n')
+    f.write(('-'*20) + '\n' + 'Lowest Rated General Queries (1 or 2 / 4)' + '\n' + ('-'*20) + '\n')
     
     for i in final_low: # finally filters out NaN values and appends to file
         if str(i) != 'nan' :
             f.write(str(i)+'\n')
 
-def averagerate(): # appends an average of all user ratings to the txt file, default to 4 star rating
-    listi = []
-    for i in list(qread.loc[:,'Rate UX Column']):
+def averagerate(fileread, f): # appends an average of all user ratings to the txt file, assuming ratings are out of 4
+    list1 = []
+    for i in list(fileread.loc[:,'column_name']):
         # filters out Nan values, faster than other methods
         if i in range(0,5):
-            listi.append(i)
-    average = sum(listi)/len(listi)
+            list1.append(i)
+    average = sum(list1)/len(list1)
     f.write("Average Rating: " + str(average))
 
-def rating_plotter(): # plots a bar graph of total numbers of each user rating
+def rating_plotter(fileread): # plots a bar graph of total numbers of each user rating
     # defines the counter variable and how many ratings exist 
-    counter = list(qread.loc[:,'Rate UX Column'])
+    counter = list(fileread.loc[:,'column_name'])
     totals = [counter.count(1), counter.count(2), counter.count(3), counter.count(4)]
     ind = np.arange(4)    # the x locations for the groups
     width = 0.45       # the width of the bars: can also be len(x) sequence
@@ -73,7 +73,7 @@ def rating_plotter(): # plots a bar graph of total numbers of each user rating
 
     #mp.transforms.Bbox(points=True, minposy = 150)
     plt.ylabel('Number of User Ratings')
-    plt.title('User Ratings for chatbot')
+    plt.title('User Ratings for Quriobot')
     plt.xticks(ind, ('1 star', '2 star', '3 star', '4 star'))
     rects = p1.patches
     # for each bar: Place a label
@@ -93,64 +93,69 @@ def rating_plotter(): # plots a bar graph of total numbers of each user rating
             xytext=(0, space),          # vertically shift label by `space`
             textcoords="offset points", # interpret `xytext` as offset in points
             ha='center')                # horizontally center label
-    plt.show()
+    return plt
 
-def conversion_plotter(): # plots a pie chart of how many chats complete (conversion rate)
-    conv = list(qread.loc[:,'isComplete'])
+def conversion_plotter(fileread): # plots a pie chart of how many chats complete (conversion rate)
+    conv = list(fileread.loc[:,'column_name'])
     x = conv.count(True)
     y = conv.count(False)
     sizes = [x,y]
     labels = 'Completed', 'Not Completed'
-    explode = (0.5,0)  # only "explode" the 2nd slice (i.e. 'Complete'), currently not working
+    explode = (0.5,0)  # only "explode" the 2nd slice (i.e. 'Complete')
 
     fig1, ax1 = plt.subplots()
     ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
             shadow=True, startangle=90)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.title('Conversion Ratings for chatbot', pad=20)
-    plt.show()
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+    plt.title('Conversion Ratings for Quriobot', pad=20)
+    return plt
 
-def word_cloud(): # generates a random word cloud out of general enquiries words
+def word_cloud(fileread): # generates a random word cloud out of general enquiries words
     text = [] # pulls all text input words into one string, filtering out NaN values
-    for i in list(qread.loc[:,'User Input Column']):
+    for i in list(fileread.loc[:,'column_name']):
         if str(i) != 'nan':
             text.append(i.lower())
     text1 = ' '.join(text)
     # initialises wordcloud with listed parameters
     wordcloud = WordCloud(background_color='white', height=100, stopwords=None, \
-    relative_scaling=0.2, scale=5).generate(text1)
+    relative_scaling=0.2, scale=10).generate(text1)
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis("off")
-    plt.show()
+    #plt.show()
+    return plt
 
-def time_day(): # plots a histogram of hours of the day chats are started
+def time_day(fileread): # plots a histogram of hours of the day chats are started
     def bins_labels(bins, **kwargs):
         bin_w = (max(bins) - min(bins)) / (len(bins) - 1)
         plt.xticks(np.arange(min(bins)+bin_w/2, max(bins), bin_w), bins, **kwargs)
         plt.xlim(bins[0], bins[-1])
 
-    times = qread.loc[:,'start']
+    times = fileread.loc[:,'start']
     list1 = []
     for time in times:
         list1.append(time[11:13]) # 11-13 is the hours slice of the time string
     list1 = sorted(list1)
-    bins=range(25) # 24 hour slots
+    bins=range(25)
     plt.hist(list1, align='mid',bins=bins, histtype='step')
     bins_labels(bins, fontsize=10)
     plt.xlabel('Time (24 Hour)')
     plt.ylabel('Number of Chats')
     plt.title('Chats on Hour of Day')
     plt.grid(True, which='major', alpha=0.4)
-    plt.show()
+    return plt
 
-    '2018-10-29T13:52:42Z' # example string of time
+    '2018-10-29T13:52:42Z'
 
+def masterwrite(*writers): # calls all writing functions
+    colread(qread, targetcols, f)
+    lowrate(qread, f)
+    averagerate(qread, f)
 
-# calls all defined functions
-colread()
-lowrate()
-averagerate()
-rating_plotter()
-conversion_plotter()
-word_cloud()
-time_day()
+def mastergraph(*graphers): # calls all graph functions
+    for i in graphers:
+        i(qread).show()
+        i(qread).savefig('Graph %s.pdf' % i.__name__)
+        i(qread).close()
+
+mastergraph(word_cloud, rating_plotter, time_day)
+masterwrite(colread, averagerate, lowrate)
