@@ -62,9 +62,15 @@ def averagerate(fileread, f): # appends an average of all user ratings to the tx
     f.write("Average Rating: " + str(average))
 
 def rating_plotter(fileread): # plots a bar graph of total numbers of each user rating
-    # defines the counter variable and how many ratings exist 
-    counter = list(fileread.loc[:,'column_name'])
-    totals = [counter.count(1), counter.count(2), counter.count(3), counter.count(4)]
+    # defines the counter variable and how many ratings exist, needs 'holding' to filter floats/NaNs
+    holding = []
+    counter = fileread.loc[:,'48. ## RATE ## User Experience']
+    for i in counter:
+        try:
+            holding.append(int(i))
+        except:
+            pass
+    totals = [holding.count(1), holding.count(2), holding.count(3), holding.count(4)+ holding.count(5)]
     ind = np.arange(4)    # the x locations for the groups
     width = 0.45       # the width of the bars: can also be len(x) sequence
 
