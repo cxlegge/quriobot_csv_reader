@@ -2,20 +2,20 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pyl
-import re
-import numpy as np
-import operator as op
+import re, numpy as np, operator as op
 # used for the wordcloud generator
 from PIL import Image
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 
-# sets the path to the source file, where 'qdata.csv' is the filename
-# and 'qdbdatasysxp.txt' is the text file destination
-qread = pd.read_csv('qdata.csv', index_col=False)
-targetcols = ['col1', 'col2', 'col3']
-f = open('results.txt', 'w+')
+# sets the path to the source file, where 'data.csv' is the filename
+# and 'datasys.txt' is the text file destination
+qread = pd.read_csv('data.csv', index_col=False)
 
-def colread(fileread, targetcols, f): # loops through targetcols, writes counts of column to file, bounded by 20 dashes
+f = open('datasys.txt', 'w+')
+
+
+def colread(fileread, f): # loops through targetcols, writes counts of column to file, bounded by 20 dashes
+    targetcols = ['col1', 'col2','col3']
     # normalises the text to lower case in a holding list
     for targetcol in targetcols:
         list1 = []
@@ -40,31 +40,38 @@ def colread(fileread, targetcols, f): # loops through targetcols, writes counts 
 
 def lowrate(fileread, f): # appends a list of all general queries that led to a rating of 1 or 2 out of 4
     # sorts ratings by value in new Series then adds 1s and 2s together
-    filereadsort = fileread.sort_values(by='column_name')
+    fileread['column_name'] = pd.to_numeric(fileread['column_name'],errors='coerce')
+    fileread['column_name'] = fileread['column_name'].dropna()
+
+    filereadsort = fileread.sort_values('column_name')
     lowratings = list(filereadsort.loc[:,'column_name'])
     lowratingscount = (lowratings.count(1) + lowratings.count(2))
     # creates Series from the ratings column indices 0 - (number of low ratings counted earlier)
+    # this has 26 as the column index being sorted for low ratings
     final_low = (filereadsort.iloc[:(lowratingscount)-1,26])
     # creates header with title
-    f.write(('-'*20) + '\n' + 'Lowest Rated General Queries (1 or 2 / 4)' + '\n' + ('-'*20) + '\n')
+    f.write(('-'*20) + '\n' + 'Lowest Rated Queries (1 or 2 / 4)' + '\n' + ('-'*20) + '\n')
     
     for i in final_low: # finally filters out NaN values and appends to file
         if str(i) != 'nan' :
             f.write(str(i)+'\n')
 
-def averagerate(fileread, f): # appends an average of all user ratings to the txt file, assuming ratings are out of 4
+def averagerate(fileread, f): # appends an average of all user ratings to the txt file
     list1 = []
     for i in list(fileread.loc[:,'column_name']):
+        # 5 star ratings are deprecated, old 5s are now combined to 4s
+        if i == 5:
+            i = 4
         # filters out Nan values, faster than other methods
         if i in range(0,5):
             list1.append(i)
     average = sum(list1)/len(list1)
-    f.write("Average Rating: " + str(average))
+    f.write('\n' + "Average Rating: " + str(average) + '\n')
 
-def rating_plotter(fileread): # plots a bar graph of total numbers of each user rating
-    # defines the counter variable and how many ratings exist, needs 'holding' to filter floats/NaNs
+def User_Ratings(fileread): # plots a bar graph of total numbers of each user rating
+    # defines the counter variable and how many ratings exist 
     holding = []
-    counter = fileread.loc[:,'48. ## RATE ## User Experience']
+    counter = fileread.loc[:,'column_name']
     for i in counter:
         try:
             holding.append(int(i))
@@ -79,7 +86,7 @@ def rating_plotter(fileread): # plots a bar graph of total numbers of each user 
 
     #mp.transforms.Bbox(points=True, minposy = 150)
     plt.ylabel('Number of User Ratings')
-    plt.title('User Ratings for Quriobot')
+    plt.title('User Ratings for chatbot')
     plt.xticks(ind, ('1 star', '2 star', '3 star', '4 star'))
     rects = p1.patches
     # for each bar: Place a label
@@ -102,7 +109,7 @@ def rating_plotter(fileread): # plots a bar graph of total numbers of each user 
     return plt
 
 def conversion_plotter(fileread): # plots a pie chart of how many chats complete (conversion rate)
-    conv = list(fileread.loc[:,'column_name'])
+    conv = list(fileread.loc[:,'isComplete'])
     x = conv.count(True)
     y = conv.count(False)
     sizes = [x,y]
@@ -112,11 +119,11 @@ def conversion_plotter(fileread): # plots a pie chart of how many chats complete
     fig1, ax1 = plt.subplots()
     ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
             shadow=True, startangle=90)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-    plt.title('Conversion Ratings for Quriobot', pad=20)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.title('Conversion Ratings for chatbot', pad=20)
     return plt
 
-def word_cloud(fileread): # generates a random word cloud out of general enquiries words
+def Word_Cloud(fileread): # generates a random word cloud out of general enquiries words
     text = [] # pulls all text input words into one string, filtering out NaN values
     for i in list(fileread.loc[:,'column_name']):
         if str(i) != 'nan':
@@ -127,10 +134,9 @@ def word_cloud(fileread): # generates a random word cloud out of general enquiri
     relative_scaling=0.2, scale=10).generate(text1)
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis("off")
-    #plt.show()
     return plt
 
-def time_day(fileread): # plots a histogram of hours of the day chats are started
+def Time_Of_Day(fileread): # plots a histogram of hours of the day chats are started
     def bins_labels(bins, **kwargs):
         bin_w = (max(bins) - min(bins)) / (len(bins) - 1)
         plt.xticks(np.arange(min(bins)+bin_w/2, max(bins), bin_w), bins, **kwargs)
@@ -150,18 +156,20 @@ def time_day(fileread): # plots a histogram of hours of the day chats are starte
     plt.grid(True, which='major', alpha=0.4)
     return plt
 
-    '2018-10-29T13:52:42Z'
+    '2018-10-29T13:52:42Z' # example time string
 
 def masterwrite(*writers): # calls all writing functions
-    colread(qread, targetcols, f)
-    lowrate(qread, f)
+    '''for i in writers:
+        f.write(('-'*25) + i(qread, f))'''
+    colread(qread, f)
     averagerate(qread, f)
+    lowrate(qread, f)
 
 def mastergraph(*graphers): # calls all graph functions
     for i in graphers:
         i(qread).show()
-        i(qread).savefig('Graph %s.pdf' % i.__name__)
+        i(qread).savefig('%s.pdf' % i.__name__)
         i(qread).close()
 
-mastergraph(word_cloud, rating_plotter, time_day)
+mastergraph(User_Ratings, Word_Cloud, Time_Of_Day)
 masterwrite(colread, averagerate, lowrate)
