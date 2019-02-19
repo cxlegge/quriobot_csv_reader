@@ -18,13 +18,7 @@ class mastergrapher(object):
         func.savefig('{}.pdf'.format(obj.__doc__))
         func.show()
         func.close()
-# obsolete class that ideally would work with other text classes not yet implemented
-class masterwriter(object):
-    def __init__(self, fileread, f):
-        self.fileread = fileread
-        self.f = f
-    def mwrite(func, f):
-        f.write('-'*25 + '\n' + str(func) + '\n')
+
 # creates a wordcloud image
 class Wordcloud(mastergrapher):
     '''Word Cloud'''
@@ -89,6 +83,7 @@ class UserRatings(mastergrapher):
                 textcoords="offset points", # interpret `xytext` as offset in points
                 ha='center')                # horizontally center label
         return plt
+    
 # creates a graph of how many chats occur on each hour
 class TimeOfDay(mastergrapher):
     '''Time Of Day'''
@@ -116,15 +111,16 @@ class TimeOfDay(mastergrapher):
         plt.grid(True, which='major', alpha=0.4)
         return plt
 # creates a text file which holds the queries from users
-class ColumnRead(masterwriter):
+class ColumnRead():
     def __init__(self):
         super().__init__
     def createwrite(fileread, f):
-        targetcols = ['column_name1','column_name2']
+        targetcols = ['column_name1','column_name2'] # these should be just the keywords of the column
         # normalises the text to lower case in a holding list
         for targetcol in targetcols:
+            first = fileread.filter(regex=targetcol)
             list1 = []
-            for i in list((fileread.loc[:,targetcol])):
+            for i in list((first.iloc[:,0])):
                 try:
                     list1.append(i.lower())
                 except:
@@ -142,6 +138,7 @@ class ColumnRead(masterwriter):
             for u in groupdict_x: # writes the key/value pairs
                 f.write(str(pos) + '.' + str(u[0]) + ' : ' + str(u[1]) + '\n')
                 pos += 1
+                
 # creates a pie chart of multiple choice ratios
 class UserType(mastergrapher):
     '''Ratio Graph'''
@@ -169,6 +166,7 @@ class UserType(mastergrapher):
         plt.pie(sizes, labels=labels, autopct='%1.1f%%', pctdistance=0.75, startangle=180)
         plt.title('Ratios', pad=10)
         return plt
+    
 Wordcloud.mgraph(Wordcloud, Wordcloud.creategraph(fileread))
 UserRatings.mgraph(UserRatings, UserRatings.creategraph(fileread))
 TimeOfDay.mgraph(TimeOfDay, TimeOfDay.creategraph(fileread))
